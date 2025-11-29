@@ -86,8 +86,8 @@ The model analyzes each student’s learning progress and performance patterns t
 - Data augmentation ensures robustness and generalization.  
 - Random Forest handles numeric features natively; categorical encoding applied for labels.  
 - Training and validation accuracy monitored to ensure minimal overfitting.  
-
----
+- Accuarcy Score is 95% On Test Data
+----
 
 ## References
 
