@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Level Predictor</title>
+<style>
+  :root { --bg:#f4f6fb; --card:#fff; --ink:#1f2937; --muted:#6b7280; --brand:#4f46e5; --line:#e5e7eb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --ink:#e5e7eb; --muted:#94a3b8; --line:#334155; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--ink); padding:24px 16px; }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:1.7rem; } .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:18px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  label { display:block; font-size:.85rem; color:var(--muted); margin-bottom:4px; }
+  input { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); font-size:1rem; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  button { padding:11px 18px; border:0; border-radius:10px; background:var(--brand); color:#fff; font-weight:600; font-size:1rem; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--brand); border:1px solid var(--brand); }
+  .level { font-size:2rem; font-weight:700; margin:0; } .muted { color:var(--muted); }
+  .bar { height:10px; background:var(--line); border-radius:6px; overflow:hidden; } .bar > div { height:100%; background:var(--brand); }
+  .prob { display:grid; grid-template-columns:130px 1fr 52px; gap:10px; align-items:center; margin:6px 0; font-size:.9rem; }
+  .error { color:#dc2626; font-weight:600; } ul { margin:8px 0 0; padding-left:20px; } .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Student Level Predictor</h1>
+  <p class="sub">Enter a student's learning KPIs from the Elara app to get their performance level and suggested support.</p>
+
+  <form id="form" class="card">
+    <div class="grid">
+      {% for f in features %}
+      <div>
+        <label for="{{ f }}">{{ f.replace('_', ' ') }}</label>
+        <input id="{{ f }}" name="{{ f }}" type="number" step="any" min="{{ limits[f][0] }}" max="{{ limits[f][1] }}" required>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="row">
+      <button type="submit">Predict level</button>
+      {% for name in presets %}<button type="button" class="ghost" data-preset="{{ name }}">Fill: {{ name }} example</button>{% endfor %}
+    </div>
+  </form>
+
+  <div id="result" class="card hidden">
+    <p class="muted" style="margin:0">Predicted level</p>
+    <p class="level" id="levelName"></p>
+    <p class="muted" id="confidence"></p>
+    <div id="probs"></div>
+    <h3>Suggested support in the app</h3>
+    <p id="support"></p>
+    <div id="obsBox"><h3>What stands out</h3><ul id="obs"></ul></div>
+  </div>
+  <div id="error" class="card error hidden"></div>
+</div>
+
+<script>
+const presets = {{ presets | tojson }};
+const form = document.getElementById('form');
+document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
+  Object.entries(presets[btn.dataset.preset]).forEach(([k, v]) => form.elements[k].value = v);
+}));
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const result = document.getElementById('result'), error = document.getElementById('error');
+  result.classList.add('hidden'); error.classList.add('hidden');
+  const res = await fetch('/predict', { method: 'POST', headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+  const data = await res.json();
+  if (!res.ok) { error.textContent = data.error; error.classList.remove('hidden'); return; }
+  document.getElementById('levelName').textContent = `Level ${data.level}: ${data.level_name}`;
+  document.getElementById('confidence').textContent = `Model confidence ${data.confidence}%`;
+  document.getElementById('probs').innerHTML = Object.entries(data.probabilities).map(([k, p]) =>
+    `<div class="prob"><span>${k}</span><div class="bar"><div style="width:${p}%"></div></div><span>${p}%</span></div>`).join('');
+  document.getElementById('support').textContent = data.support;
+  document.getElementById('obs').innerHTML = data.observations.map(o => `<li>${o}</li>`).join('');
+  document.getElementById('obsBox').classList.toggle('hidden', data.observations.length === 0);
+  result.classList.remove('hidden');
+});
+</script>
+</body>
+</html>
