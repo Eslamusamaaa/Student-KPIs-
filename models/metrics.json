@@ -1,0 +1,10 @@
+{
+  "train_acc_on_noisy_data": 0.8825,
+  "noisy_unseen_augmented_acc": 0.8614,
+  "noisy_unseen_no_augmentation_acc": 0.7041,
+  "augmented_acc": 1.0,
+  "augmented_macro_f1": 1.0,
+  "augmented_within_1": 1.0,
+  "no_augmentation_acc": 1.0,
+  "leaky_random_split_acc": 0.8558
+}
