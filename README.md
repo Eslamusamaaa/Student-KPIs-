@@ -1,97 +1,113 @@
 # Student Performance Classification for Elara Mobile App
 
-## Overview
-This project implements a **Random Forest Classifier** to categorize students into **five performance levels** based on their learning KPIs (Key Performance Indicators) in the Elara Mobile App.  
-The model analyzes each student’s learning progress and performance patterns to provide adaptive support, such as hints or simplified explanations, according to their level.
+A **Random Forest** that classifies students into **five performance levels** from 11 learning KPIs collected in the
+Elara mobile app. The level drives adaptive support: hints, simplified explanations or harder challenges.
 
-**Goals:**  
-- Identify students’ performance levels.  
-- Measure students’ progress and weaknesses.  
-- Enable personalized learning interventions.  
+| Beginner | Proficient |
+|---|---|
+| ![](img/Student-KPIs-/app_beginner.png) | ![](img/Student-KPIs-/app_proficient.png) |
 
----
+## Levels
 
-## Labels (Student Levels)
+| Label | Level | Description |
+|---|---|---|
+| 1 | Beginner | New to the topic, low accuracy, high hint usage, slow or negative progress |
+| 2 | Developing | Understands the basics, solves simple questions, occasional hints |
+| 3 | Progressing | Solves most questions, good accuracy, few hints |
+| 4 | Proficient | Strong student, high accuracy, handles hard questions |
+| 5 | Outstanding | Top performance across topics, rarely needs help |
 
-| Label | Level Name   | Description                                                                 |
-|-------|-------------|-----------------------------------------------------------------------------|
-| 1     | Beginner    | New to the topic, low accuracy, high hint usage, low trend (slow/negative progress). |
-| 2     | Developing  | Started understanding basics, can solve simple questions, occasional hint usage. |
-| 3     | Progressing | Can solve most questions, good accuracy, relies minimally on hints.         |
-| 4     | Proficient  | Strong student, high accuracy, capable of handling hard questions confidently. |
-| 5     | Outstanding| Excellent student, top performance across all topics, rarely needs help.    |
+The **Score Trend** shows improvement or decline over time but does not decide the label alone; all KPIs count.
 
-**Note:** The **Score Trend** shows improvement or decline over time but does not alone determine the label; all KPIs are considered together.
+## KPIs (model inputs)
 
----
+| Feature | Meaning | Calculation |
+|---|---|---|
+| Overall Accuracy | Share of correct answers | `correct / attempts` |
+| First-Try Success Rate | Correct on the first attempt | `first_attempt_correct / attempts` |
+| Average Time per Question | Time per question, excluding hints | `answer_submitted_at - question_opened_at - hint time` |
+| Hard Question Accuracy | Accuracy on "Hard" questions | `correct_hard / total_hard` |
+| Attempts per Question | Average attempts before correct/abandon | mean of max attempt per question |
+| Hint Usage Rate | Questions where a hint was requested | `questions_with_hint / attempted` |
+| Hint Efficiency | Correct after using a hint | `correct_after_hint / hint_requests` |
+| Time Before First Hint | Average wait before asking for a hint | `hint_requested_at - question_opened_at` |
+| Post-Hint Improvement Score | Improvement after hints | `correct_after_hint - correct_before_hint` rate |
+| Topic Weakness Count | Topics with accuracy below 60% | count of weak topics |
+| Score Trend | Learning velocity | slope of a linear fit of score over time |
 
-## Features (KPIs) and Calculation
+## Results
 
-| Feature | Meaning | Calculation | Example |
-|---------|---------|-------------|---------|
-| Overall Accuracy | % of correct answers out of all attempts | `correct_answers / total_attempts` | 50 attempted → 40 correct → 0.8 |
-| First-Try Success Rate | % of questions correct on first attempt | `first_attempt_correct / total_attempts` | 50 questions → 30 correct → 0.6 |
-| Average Time per Question | Avg time per question, excluding hints | `question_opened_at → answer_submitted_at` minus hint durations | [60s, 90s, 30s] → avg 60s |
-| Hard Question Accuracy | Correct % on "Hard" questions | `correct_hard / total_hard_attempted` | 10/15 → 0.667 |
-| Attempts per Question (APQ) | Avg attempts per question before correct/abandon | Max attempt per question, average across questions | [1,2,3] → 2 |
-| Hint Usage Rate | Fraction of questions where hint requested | `questions_with_hint / total_attempted` | 20/50 → 0.4 |
-| Hint Efficiency / Success-after-Hint | Fraction correct after using a hint | `correct_after_hint / total_hint_requests` | 7/10 → 0.7 |
-| Time Before First Hint (TBFH) | Avg time before first hint requested | `hint_requested_at - question_opened_at` | [60s,120s,90s] → avg 90s |
-| Post-Hint Improvement Score (PHIS) | Improvement after hints | `(correct_after_hint / total_hint) - (correct_before_hint / total_hint)` | Before:3/10, After:6/10 → 0.3 |
-| Topic Weakness Count / Accuracy Vector | Number of topics with <60% accuracy | Compute accuracy per topic; count topics <0.6 | 10 topics → 4 weak topics |
-| Score Trend / Learning Velocity | Progress over time | Slope of linear regression of `(timestamp, score)` series | Week1:60%, W2:70%, W3:75% → +7.5%/week |
+Evaluation is done on **real students the model has never seen**, repeated with 5 different splits (60 held-out
+students each, 300 predictions in total).
 
----
+| Test | Accuracy |
+|---|---|
+| Unseen real students | **100%** (same without augmentation) |
+| Noisy / contradictory profiles of unseen students, trained **with** augmentation | **86.1%** |
+| Same noisy profiles, trained **without** augmentation (300 rows only) | 70.4% |
+| Random split of the augmented file (leaky, for reference) | 85.6% |
 
-## Dataset Construction (300 Records)
+![](img/Student-KPIs-/confusion_matrix.png)
 
-1. **Initial Dataset**  
-   - 300 student records from Elara Mobile App logs.  
-   - Each record includes the 11 KPIs and a Label (1–5).  
+How to read this:
 
-2. **Label Assignment**  
-   - Based on combined KPIs: accuracy, attempts, hint usage, trend, hard question performance.  
-   - Score Trend shows development trajectory but is not used alone.  
+- The 300 real records are almost perfectly separable, so even a model trained on 300 rows gets 100% on new real
+  students. The labels were assigned from the same KPIs, so this shows the model recovers the labelling rules, not
+  that it predicts real learning outcomes. Validate on students labelled independently (teacher grades, exam results)
+  before relying on it.
+- Augmentation does not raise the accuracy on clean records. Its value is **robustness**: with realistic noise and
+  contradictory profiles the augmented model keeps 86% while the 300-row model drops to 70%.
+- The 90,000 augmented rows are noisy copies of 300 students. A random split of that file puts copies of the same
+  student in train and test; the evaluation here augments **after** splitting, so no copy of a test student is ever
+  seen in training.
 
-3. **Data Augmentation**  
-   - Generated additional synthetic records to increase variability (~90,000–100,000 records).  
-   - Introduced contradictory / edge cases (~12%) to prevent overfitting.  
-   - Added controlled noise to numeric KPIs.  
-   - Applied scaling and normalization to features.  
-   - Shuffled and combined feature values to generate variations.  
-   - Created duplicate variations with slight perturbations.  
+## Data
 
-4. **Purpose of Augmentation**  
-   - Enhance model generalization.  
-   - Prevent memorization of patterns.  
-   - Simulate diverse real-world student behaviors.  
+- `data/Elara_Student_Features.csv`: 300 real records (60 per level) with the 11 KPIs and the level.
+- `data/Student_KPIs_Elara_Augmented.csv`: 90,000 rows generated by `src/data_augmentation.py` (seeded, so it is reproducible).
 
-5. **Purpose of the Model**  
-   - Predict student performance level (1–5).  
-   - Identify weaknesses and improvement areas.  
-   - Enable adaptive interventions (hints, explanations, targeted topics).  
+Augmentation, tuned to **prevent overfitting**:
 
----
+- Gaussian noise on every KPI (1.5x the base scale), truncated to valid ranges.
+- Random shocks on Score Trend (10% of rows).
+- About 12% contradictory profiles (for example high accuracy with heavy hint use, or low accuracy with fast answers).
+- About 2% outliers.
+- 3% of augmented rows get a label moved to a neighbouring level (boundary noise), so the model cannot memorise
+  the exact rules behind the 300 labels.
+- A regularised forest (`max_depth=10`, `min_samples_leaf=5`, `max_features="sqrt"`): training accuracy on the noisy
+  data is 88%, and 86% on noisy unseen students, so there is no large train/test gap.
 
-## Model Overview
+![](img/Student-KPIs-/eda_real_vs_augmented.png)
 
-- **Algorithm:** Random Forest Classifier (sklearn)  
-- **Input:** 11 KPIs  
-- **Output:** Student Level (1–5)  
-- **Training Dataset:** Augmented dataset (~90k–100k records)  
-- **Purpose:** Predict performance level and guide personalized learning strategies.  
+More figures: [level distribution](img/Student-KPIs-/eda_level_distribution.png),
+[correlation](img/Student-KPIs-/eda_correlation.png), [box plots](img/Student-KPIs-/eda_boxplots.png),
+[feature importance](img/Student-KPIs-/feature_importance.png).
 
-**Notes:**  
-- All KPIs contribute to label prediction.  
-- Data augmentation ensures robustness and generalization.  
-- Random Forest handles numeric features natively; categorical encoding applied for labels.  
-- Training and validation accuracy monitored to ensure minimal overfitting.  
-- Accuarcy Score is 95% On Test Data
-----
+## Project structure
 
-## References
+```
+├── config.py                  # paths, features, noise settings
+├── run_pipeline.py            # augmentation -> EDA -> training in one command
+├── app.py                     # small Flask demo
+├── templates/index.html
+├── src/
+│   ├── data_augmentation.py   # noisy synthetic records
+│   ├── eda.py                 # figures
+│   ├── train.py               # honest evaluation + final model
+│   └── predictor.py           # level prediction + support suggestions
+├── data/                      # real and augmented CSV files
+├── models/                    # student_level_rf_model.pkl, metrics.json
+└── img/                       # screenshots and figures
+```
 
-- Elara Mobile App logs  
-- KPIs definitions above  
-- Random Forest methodology (sklearn)  
-- Data augmentation techniques: noise injection, contradictory examples (~12%), record shuffling, scaling, duplicates
+## Setup and run
+
+```bash
+pip install -r requirements.txt
+python app.py        # demo at http://127.0.0.1:5000
+python run_pipeline.py   # rebuild data, figures and model
+```
+
+## License
+
+MIT License
