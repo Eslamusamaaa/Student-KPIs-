@@ -95,6 +95,7 @@ More figures: [level distribution](img/Student-KPIs-/eda_level_distribution.png)
 │   ├── eda.py                 # figures
 │   ├── train.py               # honest evaluation + final model
 │   └── predictor.py           # level prediction + support suggestions
+├── notebooks/                 # original exploration: EDA and first augmentation code
 ├── data/                      # real and augmented CSV files
 ├── models/                    # student_level_rf_model.pkl, metrics.json
 └── img/                       # screenshots and figures
@@ -107,6 +108,12 @@ pip install -r requirements.txt
 python app.py        # demo at http://127.0.0.1:5000
 python run_pipeline.py   # rebuild data, figures and model
 ```
+
+## Notebooks
+
+`notebooks/KpisElaraDemo.ipynb` keeps the original EDA and the first version of the augmentation code with its
+outputs. The `.py` modules in `src/` are the maintained version (they add the noise settings and the split-before-augment
+evaluation); the notebook still has file paths from the original machine, so edit them before re-running.
 
 ## License
 
