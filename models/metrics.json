@@ -6,5 +6,5 @@
   "augmented_macro_f1": 1.0,
   "augmented_within_1": 1.0,
   "no_augmentation_acc": 1.0,
-  "leaky_random_split_acc": 0.8558
+  "random_split_acc": 0.8558
 }

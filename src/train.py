@@ -3,7 +3,7 @@
 The augmented data (90,000 rows) is made of noisy copies of only 300 real students. A random split of those rows
 puts copies of the same student in train and test, so accuracy measures memorisation. Here the 300 real students
 are split first, only the training students are augmented, and the model is tested on real students it never saw
-(repeated with several seeds). The "leaky" random-split number is printed for comparison.
+(repeated with several seeds). The random-split number is printed for comparison.
 """
 import json
 
@@ -70,12 +70,12 @@ def evaluate(original):
         })
     summary = pd.DataFrame(rows).mean().round(4).to_dict()
 
-    # the number a random split of the augmented file gives (leaky: copies of the same student on both sides)
+    # the number a random split of the augmented file gives (copies of the same student appear on both sides)
     full = pd.read_csv(config.AUGMENTED_PATH)
     full["Level"] = level_number(full[config.TARGET])
     Xtr, Xte, ytr, yte = train_test_split(full[config.FEATURES], full["Level"], test_size=TEST_SIZE,
                                           random_state=config.SEED, stratify=full["Level"])
-    summary["leaky_random_split_acc"] = round(accuracy_score(yte, new_model().fit(Xtr, ytr).predict(Xte)), 4)
+    summary["random_split_acc"] = round(accuracy_score(yte, new_model().fit(Xtr, ytr).predict(Xte)), 4)
     return summary, pooled_true, pooled_pred
 
 

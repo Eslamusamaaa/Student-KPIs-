@@ -45,21 +45,20 @@ students each, 300 predictions in total).
 | Unseen real students | **100%** (same without augmentation) |
 | Noisy / contradictory profiles of unseen students, trained **with** augmentation | **86.1%** |
 | Same noisy profiles, trained **without** augmentation (300 rows only) | 70.4% |
-| Random split of the augmented file (leaky, for reference) | 85.6% |
+| Random split of all augmented rows (for reference) | 85.6% |
 
 ![](img/Student-KPIs-/confusion_matrix.png)
 
 How to read this:
 
 - The 300 real records are almost perfectly separable, so even a model trained on 300 rows gets 100% on new real
-  students. The labels were assigned from the same KPIs, so this shows the model recovers the labelling rules, not
-  that it predicts real learning outcomes. Validate on students labelled independently (teacher grades, exam results)
-  before relying on it.
+  students. The labels were assigned from the same KPIs, so the model recovers the labelling rules; validating on students
+  labelled independently (teacher grades, exam results) is the natural next step.
 - Augmentation does not raise the accuracy on clean records. Its value is **robustness**: with realistic noise and
   contradictory profiles the augmented model keeps 86% while the 300-row model drops to 70%.
-- The 90,000 augmented rows are noisy copies of 300 students. A random split of that file puts copies of the same
-  student in train and test; the evaluation here augments **after** splitting, so no copy of a test student is ever
-  seen in training.
+- The 90,000 augmented rows are noisy copies of 300 students. A random split of that file would place copies of the
+  same student on both sides; the evaluation here augments **after** splitting, so no copy of a test student appears in
+  training.
 
 ## Data
 
@@ -93,7 +92,7 @@ More figures: [level distribution](img/Student-KPIs-/eda_level_distribution.png)
 ├── src/
 │   ├── data_augmentation.py   # noisy synthetic records
 │   ├── eda.py                 # figures
-│   ├── train.py               # honest evaluation + final model
+│   ├── train.py               # evaluation + final model
 │   └── predictor.py           # level prediction + support suggestions
 ├── data/                      # real and augmented CSV files
 ├── models/                    # student_level_rf_model.pkl, metrics.json
